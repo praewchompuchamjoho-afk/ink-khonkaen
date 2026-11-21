@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INK KHON KAEN | รวมร้านสักลายขอนแก่น</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="w">
+  <div class="lg"><i></i>INK KHON KAEN</div>
+  <nav><a href="#shops">ร้านทั้งหมด</a><a href="#map">แผนที่</a><a href="#add">เพิ่มร้านของคุณ</a></nav>
+</div></header>
+
+<main>
+<section class="w hero">
+  <h1>รวมร้านสักลาย<br><em>ในขอนแก่น</em> ที่เดียวจบ</h1>
+  <p>ดูตำแหน่งบนแผนที่ กดนำทางไปร้าน ติดต่อร้านได้ทันที ดูคะแนนจาก Google และดูว่าแต่ละร้านถนัดสไตล์ไหน ร้านที่ยังไม่อยู่ในรายการเพิ่มข้อมูลเองได้</p>
+  <div class="st" id="stats"></div>
+</section>
+
+<section class="w sec" id="map">
+  <h2>แผนที่ร้านสัก</h2>
+  <div id="mapbox" role="application" aria-label="แผนที่ร้านสักในจังหวัดขอนแก่น"></div>
+  <div id="pinBar" class="pinbar" hidden><span id="pinTxt">ปักหมุดแล้ว</span><button type="button" id="pinDone">ใช้ตำแหน่งนี้ กลับไปกรอกฟอร์ม</button></div>
+</section>
+
+<section class="w sec" id="shops">
+  <h2>ร้านทั้งหมด</h2>
+  <div class="bar">
+    <label for="q" class="vh">ค้นหาร้าน</label>
+    <input id="q" type="search" placeholder="ค้นหาชื่อร้าน">
+    <div id="chips" class="ks"></div>
+  </div>
+  <p id="count" class="sub" aria-live="polite"></p>
+  <div id="grid" class="g"></div>
+</section>
+
+<section class="w sec" id="add" hidden>
+  <h2>เพิ่มร้านของคุณ</h2>
+  <p class="sub">เจ้าของร้านที่ยังไม่อยู่ในรายการ กรอกข้อมูลและปักพิกัดร้าน ทีมงานตรวจสอบก่อนแสดงบนเว็บ</p>
+  <form id="f" class="fm" novalidate>
+    <label>ชื่อร้าน<input name="name" maxlength="80" required></label>
+    <label>ประเภท
+      <select name="type"><option value="studio">สตูดิโอสักลาย</option><option value="yant">สำนักสักยันต์</option></select>
+    </label>
+    <fieldset><legend>สไตล์ที่ถนัด</legend><div id="styleBoxes" class="ck"></div></fieldset>
+    <fieldset><legend>พิกัดร้าน</legend>
+      <div class="sbox">
+        <label>ค้นหาสถานที่บนแผนที่<input id="place" type="search" placeholder="พิมพ์ชื่อร้านหรือที่อยู่ เช่น เซ็นทรัลขอนแก่น" autocomplete="off"></label>
+        <ul id="placeList" class="plist" hidden></ul>
+      </div>
+      <div class="two">
+        <label>ละติจูด<input name="lat" inputmode="decimal" placeholder="เช่น 16.4322" required></label>
+        <label>ลองจิจูด<input name="lng" inputmode="decimal" placeholder="เช่น 102.8236" required></label>
+      </div>
+      <div class="btns">
+        <button type="button" id="gps">ใช้ตำแหน่งปัจจุบันของฉัน</button>
+        <button type="button" id="pick">ปักหมุดบนแผนที่</button>
+      </div>
+      <p class="hint">ถ้าอยู่หน้าร้านตอนกรอก พิมพ์ค้นหาสถานที่ กดใช้ตำแหน่งปัจจุบัน (ตอนอยู่หน้าร้าน) หรือกดปักหมุดบนแผนที่ ระบบจะพาไปที่แผนที่และวางหมุดให้ ลากหมุดเพื่อปรับได้</p>
+    </fieldset>
+    <div class="two">
+      <label>เบอร์โทร<input name="tel" inputmode="tel" maxlength="20"></label>
+      <label>ลิงก์ Facebook<input name="fb" type="url" maxlength="200" placeholder="https://"></label>
+    </div>
+    <label>ลิงก์ Instagram<input name="ig" type="url" maxlength="200" placeholder="https://"></label>
+    <label>เวลาเปิด-ปิด<input name="hours" maxlength="120" placeholder="เช่น ทุกวัน 10:00-20:00 หรือ จ.-ส. 12:00-21:00 หยุดวันอาทิตย์"></label>
+    <label>แนะนำร้านโดยสังเขป<textarea name="about" id="about" maxlength="300" rows="4" placeholder="เช่น สไตล์งานที่ถนัด ประสบการณ์ ราคาเริ่มต้น เวลาเปิด-ปิด ต้องนัดล่วงหน้าหรือไม่"></textarea><span class="hint" id="aboutN">0/300</span></label>
+    <fieldset><legend>รูปภาพร้านหรือผลงาน (1-6 รูป ไม่บังคับ)</legend>
+      <input type="file" id="photos" accept="image/jpeg,image/png,image/webp" multiple>
+      <div id="thumbs" class="thumbs"></div>
+      <p class="hint">เลือกได้สูงสุด 6 รูป ระบบย่อรูปให้อัตโนมัติ ใช้เฉพาะรูปที่คุณเป็นเจ้าของหรือได้รับอนุญาต ไม่ใช้รูปที่เห็นหน้าลูกค้าโดยไม่ได้ขออนุญาต และรูปจะขึ้นเว็บหลังผู้ดูแลอนุมัติ</p>
+    </fieldset>
+    <input name="website" class="trap" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <label class="agree"><input type="checkbox" name="ok" required> ฉันเป็นเจ้าของหรือผู้ได้รับมอบหมายจากร้านนี้ และยินยอมให้แสดงข้อมูลนี้บนเว็บ</label>
+    <button class="go" type="submit">ส่งข้อมูลร้าน</button>
+    <p id="msg" class="msg" role="status"></p>
+    <pre id="out" class="out" hidden></pre>
+  </form>
+</section>
+</main>
+
+<footer class="ft"><div class="w">ข้อมูลร้านที่มีอยู่เดิมรวบรวมจาก Google Maps เมื่อ 20 พฤศจิกายน 2569 อาจไม่ครบและอาจเปลี่ยนแปลง โปรดตรวจสอบกับร้านก่อนใช้บริการ เว็บไซต์นี้เป็นต้นแบบเพื่อการศึกษา ไม่ใช่การรับรองหรือจัดอันดับร้าน · <a href="terms.html">ข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว</a></div></footer>
+
+<dialog id="dlg" class="dlg" aria-labelledby="dlgTitle"></dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="config.js"></script>
+<script src="shops-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
