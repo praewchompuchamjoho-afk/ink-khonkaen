@@ -2,7 +2,51 @@
 const MAX_SHOW = 12; // จำนวนรูปสูงสุดที่แสดงต่อร้าน
 const MAX_UP = 6; // จำนวนรูปสูงสุดที่ร้านใหม่อัปโหลดผ่านฟอร์มได้ (ต้องไม่เกิน MAX_PHOTOS ใน Code.gs)
 const reviewsByKey = {}; // รีวิวจากผู้ใช้เว็บที่อนุมัติแล้ว จัดกลุ่มตามคีย์ร้าน
-const STYLE_LIST = ["ลายเส้น","ภาพประกอบ","เหมือนจริง","ยันต์ไทย","อักษรไทย","ปิดทับรอยเก่า","ปิดรอยแผลเป็น","ลบรอยสัก","มินิมอล","ลายทึบ (Blackwork)","สีน้ำ","ญี่ปุ่น","ดั้งเดิม (Traditional)"];
+// ====== รายการสไตล์/ความสนใจ แก้หรือเพิ่มได้ที่นี่ ======
+// แต่ละแถว: [ชื่อที่แสดง, กลุ่ม, คำที่คนมักพิมพ์ค้นหา (คั่นด้วย ,), สไตล์ใกล้เคียง (ใช้ชื่อให้ตรงกับแถวอื่น)]
+// ถ้าต้องการเพิ่มสไตล์ใหม่ เพิ่มแถวใหม่ แล้วใส่ชื่อเดียวกันใน styles:[...] ของร้านใน shops-data.js
+const STYLE_CATALOG = [
+  ["ลายเส้น","สไตล์งาน","line,fine line,fineline,line art,ไลน์,เส้นบาง,ลายเส้นเล็ก","มินิมอล,ภาพประกอบ,ลายขนาดเล็ก"],
+  ["ภาพประกอบ","สไตล์งาน","illustration,illustrative,drawing,วาดมือ,อาร์ต","ลายเส้น,การ์ตูน/อนิเมะ,สีน้ำ"],
+  ["เหมือนจริง","สไตล์งาน","realistic,realism,เรียลลิสติก,สมจริง,เหมือนรูปถ่าย","ไมโครเรียลลิสติก,พอร์ตเทรต/ภาพบุคคล,ขาวดำ/เฉดเทา"],
+  ["ไมโครเรียลลิสติก","สไตล์งาน","micro realism,micro realistic,microrealism,เหมือนจริงขนาดเล็ก","เหมือนจริง,ลายขนาดเล็ก,ลายเส้น"],
+  ["มินิมอล","สไตล์งาน","minimal,minimalist,minimalism,มินิ,เรียบง่าย,ลายเล็ก","ลายเส้น,ลายขนาดเล็ก,เรขาคณิต/มันดาลา"],
+  ["ลายทึบ (Blackwork)","สไตล์งาน","blackwork,black work,ทึบ,ดำทึบ,แบล็กเวิร์ก","ขาวดำ/เฉดเทา,ดอตเวิร์ก,ไทบัล"],
+  ["ขาวดำ/เฉดเทา","สไตล์งาน","black and grey,black & grey,black grey,bnw,ขาวดำ,เฉดเทา,เทา","ลายทึบ (Blackwork),เหมือนจริง"],
+  ["สีสด (Color)","สไตล์งาน","color,colour,colorful,colour tattoo,สีสด,สี,คัลเลอร์,ลายสี","สีน้ำ,ญี่ปุ่น,นีโอแทรดิชันนอล"],
+  ["สีน้ำ","สไตล์งาน","watercolor,water color,watercolour","สีสด (Color),ภาพประกอบ"],
+  ["ญี่ปุ่น","สไตล์งาน","japanese,irezumi,อิเรซึมิ,ลายญี่ปุ่น,ซามูไร,โคอิ","ดั้งเดิม (Traditional),มังกร/ลายจีน,สีสด (Color)"],
+  ["ดั้งเดิม (Traditional)","สไตล์งาน","traditional,old school,oldschool,american traditional,โอลด์สคูล,ดั้งเดิม","นีโอแทรดิชันนอล,ญี่ปุ่น"],
+  ["นีโอแทรดิชันนอล","สไตล์งาน","neo traditional,neotraditional,neo trad,นีโอ","ดั้งเดิม (Traditional),สีสด (Color)"],
+  ["ดอตเวิร์ก","สไตล์งาน","dotwork,dot work,stipple,stippling,จุด,ลายจุด","ลายทึบ (Blackwork),เรขาคณิต/มันดาลา"],
+  ["เรขาคณิต/มันดาลา","สไตล์งาน","geometric,geometry,mandala,geo,เรขาคณิต,มันดาลา","ดอตเวิร์ก,มินิมอล,ลายทึบ (Blackwork)"],
+  ["ไทบัล","สไตล์งาน","tribal,ลายชนเผ่า,ชนเผ่า","ลายทึบ (Blackwork),ดอตเวิร์ก"],
+  ["การ์ตูน/อนิเมะ","สไตล์งาน","cartoon,anime,manga,การ์ตูน,อนิเมะ,มังงะ","ภาพประกอบ,สีสด (Color)"],
+  ["ยันต์ไทย","ลายที่ลูกค้านิยม","yant,sak yant,sakyant,thai yant,ยันต์,สักยันต์,ยันต์เก้ายอด,ยันต์เสือ","อักษรไทย,ลายไทย,สักมือ (Hand-poke)"],
+  ["อักษรไทย","ลายที่ลูกค้านิยม","thai letter,thai letters,thai text,thai script,ตัวอักษรไทย,อักขระ,ภาษาไทย,ตัวหนังสือไทย","ยันต์ไทย,เลตเตอริ่ง/ตัวอักษร"],
+  ["เลตเตอริ่ง/ตัวอักษร","ลายที่ลูกค้านิยม","lettering,letter,text,font,quote,script,ตัวอักษร,ตัวหนังสือ,ข้อความ,เลตเตอริ่ง","อักษรไทย,มินิมอล"],
+  ["ลายไทย","ลายที่ลูกค้านิยม","thai art,thai pattern,กนก,ลายกนก,หนุมาน,ครุฑ,พญานาค,ลายไทยประยุกต์","ยันต์ไทย,ภาพประกอบ"],
+  ["มังกร/ลายจีน","ลายที่ลูกค้านิยม","dragon,chinese,china,มังกร,ลายจีน,จีน","ญี่ปุ่น,ลายสัตว์"],
+  ["ลายสัตว์","ลายที่ลูกค้านิยม","animal,animals,tiger,lion,wolf,เสือ,สิงโต,หมาป่า,สัตว์,นก","เหมือนจริง,มังกร/ลายจีน"],
+  ["ดอกไม้/ใบไม้","ลายที่ลูกค้านิยม","flower,floral,botanical,rose,plant,ดอกไม้,กุหลาบ,ใบไม้,ธรรมชาติ,ต้นไม้","ลายเส้น,สีน้ำ"],
+  ["พอร์ตเทรต/ภาพบุคคล","ลายที่ลูกค้านิยม","portrait,face,people,ภาพบุคคล,พอร์ตเทรต,ใบหน้า,หน้าคน,รูปคน","เหมือนจริง,ขาวดำ/เฉดเทา"],
+  ["ลายคู่/คู่รัก","ลายที่ลูกค้านิยม","couple,matching,pair,คู่,คู่รัก,ลายคู่,ลายเหมือนกัน","ลายขนาดเล็ก,มินิมอล"],
+  ["ลายขนาดเล็ก","ลายที่ลูกค้านิยม","small,tiny,mini,mini tattoo,ลายเล็ก,จิ๋ว,ตัวเล็ก,ขนาดเล็ก","มินิมอล,ลายเส้น"],
+  ["แขนเต็ม/หลังเต็ม","ลายที่ลูกค้านิยม","sleeve,full sleeve,back piece,backpiece,large,แขนเต็ม,หลังเต็ม,ลายใหญ่,ขนาดใหญ่,ขาเต็ม","เหมือนจริง,ญี่ปุ่น"],
+  ["ปิดทับรอยเก่า","บริการและความสนใจ","cover up,coverup,ทับลาย,ปิดลายเก่า,ปิดทับ,ทับลายเก่า","ปิดรอยแผลเป็น,แก้ไข/เติมสีลายเก่า,ลายทึบ (Blackwork)"],
+  ["ปิดรอยแผลเป็น","บริการและความสนใจ","scar,scars,scar cover,scar tattoo,แผลเป็น,รอยแผล,ปิดแผล","ปิดทับรอยเก่า,ลบรอยสัก"],
+  ["ลบรอยสัก","บริการและความสนใจ","removal,remove,tattoo removal,laser,เลเซอร์,ลบ,ลบลาย,ลบรอย","ปิดทับรอยเก่า,แก้ไข/เติมสีลายเก่า"],
+  ["แก้ไข/เติมสีลายเก่า","บริการและความสนใจ","touch up,touchup,fix,repair,rework,เติมสี,ซ่อมลาย,แก้ลาย,แก้ไขลาย","ปิดทับรอยเก่า,ลบรอยสัก"],
+  ["ออกแบบลายเฉพาะ","บริการและความสนใจ","custom,custom design,design,ออกแบบ,ลายเฉพาะ,ปรึกษา,ออกแบบลาย","ภาพประกอบ,ลายเส้น"],
+  ["สักมือ (Hand-poke)","บริการและความสนใจ","hand poke,handpoke,stick and poke,stick poke,สักมือ,แทงมือ,ไม้แทง","ยันต์ไทย,มินิมอล"],
+  ["เจาะ (Piercing)","บริการและความสนใจ","piercing,pierce,เจาะ,เจาะหู,เจาะจมูก,เจาะสะดือ",""]
+];
+const MAX_STYLES = 12; // จำนวนสไตล์สูงสุดที่เลือกได้ต่อร้าน
+const normQ = (s) => String(s || "").toLowerCase().replace(/[()\[\]{}\-_.,/&]+/g, " ").replace(/\s+/g, " ").trim();
+const STYLES = STYLE_CATALOG.map(([name, group, alias, near]) => ({ name, group, al: [normQ(name), ...alias.split(",").map(normQ)].filter(Boolean), near: near ? near.split(",") : [] }));
+const STYLE_GROUPS = [...new Set(STYLES.map((s) => s.group))];
+const STYLE_LIST = STYLES.map((s) => s.name);
+let relSet = new Set(); // ร้านที่แสดงเพราะ "ใกล้เคียง" ไม่ได้ตรงกับคำค้นโดยตรง
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const safeUrl = (u) => (/^https?:\/\//i.test(u || "") ? u : "");
@@ -52,17 +96,83 @@ function card(s) {
   const q = s.about ? `<p class="ab3">${esc(s.about)}</p>` : (s.quote ? `<q>${esc(s.quote)}</q>` : "");
   const cover = (s.photos || []).map(safeImg).filter(Boolean)[0];
   const img = cover ? `<img class="cp" src="${esc(cover)}" alt="รูปร้าน ${esc(s.name)}" loading="lazy" referrerpolicy="no-referrer">` : "";
-  return `<article class="c">${img}<div class="h"><span class="t${s.type === "yant" ? " y" : ""}">${typeLabel(s)}</span>${s.isNew ? '<span class="t">เพิ่มใหม่</span>' : ""}</div><h3><button type="button" class="tl more" data-i="${idx}">${esc(s.name)}</button></h3>${rate}${siteLine(s)}<p class="s"><b>ถนัด</b> ${sty}</p>${q}<div class="a"><button type="button" class="pm more" data-i="${idx}">ดูรายละเอียด</button>${links(s)}</div></article>`;
+  return `<article class="c">${img}<div class="h"><span class="t${s.type === "yant" ? " y" : ""}">${typeLabel(s)}</span>${s.isNew ? '<span class="t">เพิ่มใหม่</span>' : ""}${relSet.has(s) ? '<span class="t">ใกล้เคียง</span>' : ""}</div><h3><button type="button" class="tl more" data-i="${idx}">${esc(s.name)}</button></h3>${rate}${siteLine(s)}<p class="s"><b>ถนัด</b> ${sty}</p>${q}<div class="a"><button type="button" class="pm more" data-i="${idx}">ดูรายละเอียด</button>${links(s)}</div></article>`;
 }
 
+// ---------- ค้นหาแบบยืดหยุ่น: ชื่อร้าน สไตล์ คำพ้อง คำอธิบายร้าน พิมพ์ผิดเล็กน้อย และสไตล์ใกล้เคียง ----------
+function dice(a, b) {
+  if (a.length < 2 || b.length < 2) return 0;
+  const grams = (s) => { const g = []; for (let i = 0; i < s.length - 1; i++) g.push(s.slice(i, i + 2)); return g; };
+  const ga = grams(a), gb = grams(b), m = new Map();
+  gb.forEach((x) => m.set(x, (m.get(x) || 0) + 1));
+  let c = 0;
+  ga.forEach((x) => { if (m.get(x) > 0) { c++; m.set(x, m.get(x) - 1); } });
+  return (2 * c) / (ga.length + gb.length);
+}
+function styleHits(t) { // สไตล์ในรายการที่ตรงกับคำค้น t พร้อมน้ำหนัก
+  const hits = new Map();
+  STYLES.forEach((st) => {
+    let best = 0;
+    st.al.forEach((a) => {
+      if (a === t || (t.length >= 2 && a.includes(t))) best = Math.max(best, 10);
+      else if (a.length >= 3 && t.includes(a)) best = Math.max(best, 7);
+      else if (t.length >= 4 && a.length >= 4 && dice(t, a) >= 0.6) best = Math.max(best, 5);
+    });
+    if (best) hits.set(st.name, best);
+  });
+  return hits;
+}
+function nearOf(hits) { // สไตล์ใกล้เคียงของสไตล์ที่ตรง
+  const near = new Set();
+  hits.forEach((w, name) => { if (w >= 7) STYLES.find((s) => s.name === name).near.forEach((n) => { if (!hits.has(n)) near.add(n); }); });
+  return near;
+}
+function scoreShop(s, tokens, hits, near) {
+  const name = normQ(s.name), text = normQ((s.about || "") + " " + (s.quote || "") + " " + typeLabel(s));
+  const sty = s.styles || [];
+  let score = 0, direct = false;
+  tokens.forEach((t, i) => {
+    let best = 0;
+    if (name.includes(t)) best = 10;
+    else if (t.length >= 4 && name.split(" ").some((w) => w.length >= 4 && dice(t, w) >= 0.6)) best = 5;
+    sty.forEach((x) => {
+      const h = hits[i].get(x);
+      if (h) best = Math.max(best, h);
+      else if (normQ(x).includes(t)) best = Math.max(best, 10); // สไตล์ที่พิมพ์เองนอกรายการ
+    });
+    if (best < 7 && text.includes(t)) best = Math.max(best, 3);
+    if (best >= 5) direct = true;
+    else if (sty.some((x) => near[i].has(x))) best = Math.max(best, 3);
+    score += best;
+  });
+  return { score, direct };
+}
+const STOP_WORDS = new Set(["tattoo", "tattoos", "tatoo", "studio", "shop", "ink", "ร้าน", "สัก", "สักลาย", "ร้านสัก", "ขอนแก่น", "khonkaen", "khon kaen"]);
+function isStop(t) { return STOP_WORDS.has(t) || (t.length >= 4 && /^[a-z]+$/.test(t) && dice(t, "tattoo") >= 0.7); } // คำที่อยู่ในเกือบทุกร้าน ไม่ช่วยแยกร้าน
 function visible() {
-  return shops.filter((s) => (activeStyle === "ทั้งหมด" || (s.styles || []).includes(activeStyle)) && s.name.toLowerCase().includes(query.toLowerCase()));
+  relSet = new Set();
+  const base = shops.filter((s) => activeStyle === "ทั้งหมด" || (s.styles || []).includes(activeStyle));
+  const qn = normQ(query);
+  if (!qn) return base;
+  const raw = qn.split(" ").filter((t) => t.length >= 2 && !(/^[a-z0-9]+$/.test(t) && t.length < 3));
+  if (!raw.length) return base.filter((s) => normQ(s.name).includes(qn)); // พิมพ์ได้แค่ 1 ตัวอักษร ค้นเฉพาะชื่อ
+  const tokens = raw.filter((t) => !isStop(t));
+  if (!tokens.length) return base; // มีแต่คำทั่วไป เช่น tattoo, สัก ให้แสดงทุกร้าน
+  const hits = tokens.map(styleHits), near = hits.map(nearOf);
+  const scored = base.map((s) => ({ s, ...scoreShop(s, tokens, hits, near) })).filter((x) => x.score > 0);
+  scored.sort((a, b) => (b.direct - a.direct) || (b.score - a.score));
+  scored.forEach((x) => { if (!x.direct) relSet.add(x.s); });
+  return scored.map((x) => x.s);
+}
+function emptyMsg() {
+  return query ? `<p class="sub">ไม่พบร้านที่ตรงหรือใกล้เคียงกับ “${esc(query)}” ลองคำอื่น เช่น ลายเส้น มินิมอล ยันต์ ปิดแผลเป็น หรือกด ทั้งหมด</p>` : '<p class="sub">ไม่พบร้านที่ตรงกับตัวกรอง ลองเลือก ทั้งหมด</p>';
 }
 
 function render() {
   const list = visible();
-  $("grid").innerHTML = list.length ? list.map(card).join("") : '<p class="sub">ไม่พบร้านที่ตรงกับตัวกรอง ลองเลือก ทั้งหมด</p>';
-  $("count").textContent = `แสดง ${list.length} จาก ${shops.length} ร้าน`;
+  $("grid").innerHTML = list.length ? list.map(card).join("") : emptyMsg();
+  const nRel = list.filter((s) => relSet.has(s)).length, nDir = list.length - nRel;
+  $("count").textContent = !query ? `แสดง ${list.length} จาก ${shops.length} ร้าน` : nRel && !nDir ? `ไม่มีร้านที่ตรงกับ “${query}” พบ ${nRel} ร้านที่ใกล้เคียง` : nRel ? `พบ ${nDir} ร้านที่ตรง และ ${nRel} ร้านที่ใกล้เคียงกับ “${query}”` : `พบ ${nDir} ร้านที่ตรงกับ “${query}”`;
   markers.clearLayers();
   list.forEach((s) => {
     const m = L.marker([s.lat, s.lng]).addTo(markers);
@@ -82,9 +192,13 @@ function renderChips() {
 $("q").addEventListener("input", (e) => { query = e.target.value.trim(); render(); });
 
 // ---------- add-shop form ----------
-$("styleBoxes").innerHTML = STYLE_LIST.map((x) => `<label><input type="checkbox" name="style" value="${esc(x)}"> ${esc(x)}</label>`).join("");
+$("styleBoxes").innerHTML = STYLE_GROUPS.map((g) => `<p class="kh">${esc(g)}</p>` + STYLES.filter((s) => s.group === g).map((s) => `<label><input type="checkbox" name="style" value="${esc(s.name)}"> ${esc(s.name)}</label>`).join("")).join("");
+if ($("qlist")) $("qlist").innerHTML = STYLE_LIST.map((x) => `<option value="${esc(x)}">`).join("");
 const f = $("f");
 const say = (t) => { $("msg").textContent = t; };
+$("styleBoxes").addEventListener("change", (e) => {
+  if (e.target.checked && f.querySelectorAll('input[name="style"]:checked').length > MAX_STYLES) { e.target.checked = false; say("เลือกสไตล์ได้สูงสุด " + MAX_STYLES + " อย่าง"); }
+});
 
 const inKK = (lat, lng) => lat >= 15.5 && lat <= 17.5 && lng >= 101.5 && lng <= 103.5;
 let accCircle = null;
@@ -206,7 +320,7 @@ f.addEventListener("submit", async (e) => {
 function clean(x) {
   const lat = Number(x.lat), lng = Number(x.lng);
   if (!x.name || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { name: String(x.name).slice(0, 80), type: x.type === "yant" ? "yant" : "studio", styles: Array.isArray(x.styles) ? x.styles.map(String).slice(0, 10) : [], lat, lng, tel: safeTel(x.tel), fb: safeUrl(x.fb), ig: safeUrl(x.ig), about: String(x.about || "").slice(0, 300), hours: String(x.hours || "").slice(0, 120), photos: (Array.isArray(x.photos) ? x.photos : []).map(String).map(safeImg).filter(Boolean).slice(0, MAX_SHOW), isNew: true };
+  return { name: String(x.name).slice(0, 80), type: x.type === "yant" ? "yant" : "studio", styles: Array.isArray(x.styles) ? x.styles.map(String).slice(0, MAX_STYLES) : [], lat, lng, tel: safeTel(x.tel), fb: safeUrl(x.fb), ig: safeUrl(x.ig), about: String(x.about || "").slice(0, 300), hours: String(x.hours || "").slice(0, 120), photos: (Array.isArray(x.photos) ? x.photos : []).map(String).map(safeImg).filter(Boolean).slice(0, MAX_SHOW), isNew: true };
 }
 async function loadRemote() {
   const api = (window.CONFIG || {}).API_URL;

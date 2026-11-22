@@ -89,3 +89,4 @@ textarea{font:inherit;padding:10px 12px;border:2px solid var(--ink);background:#
 #add[hidden]{display:none}
 body.view-add .hero,body.view-add #shops{display:none}
 .ab3{margin:0;padding-top:10px;border-top:1px solid #ccc;font-size:15px;color:#333;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.kh{grid-column:1/-1;margin:10px 0 0;font-weight:700;font-size:15px}.kh:first-child{margin-top:0}
