@@ -60,13 +60,55 @@ let query = "";
 let picking = false;
 let draftPin = null;
 
-// ---------- map ----------
-const map = L.map("mapbox").setView([16.44, 102.82], 11);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap contributors",
-}).addTo(map);
-const markers = L.layerGroup().addTo(map);
+// ---------- map (โทนสว่าง หมุดสี กลุ่มหมุด ป็อปอัปการ์ด) ----------
+const MAP_KEY = (window.CONFIG || {}).MAP_KEY || ""; // คีย์ฟรีของ CARTO (ไม่ใส่ก็ได้) ใส่แล้วได้แผนที่ Voyager/Positron
+const map = L.map("mapbox", { zoomControl: false, scrollWheelZoom: false }).setView([16.44, 102.82], 11);
+L.control.zoom({ position: "bottomright" }).addTo(map);
+map.on("focus", () => map.scrollWheelZoom.enable()); // เลื่อนหน้าเว็บผ่านแผนที่ได้ ซูมด้วยล้อเมาส์หลังคลิกที่แผนที่
+map.on("blur", () => map.scrollWheelZoom.disable());
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+if (MAP_KEY) {
+  const carto = (path, retina) => L.tileLayer(`https://basemaps.cartocdn.com/rastertiles/${path}/{z}/{x}/{y}${retina ? "{r}" : ""}.png?key=${encodeURIComponent(MAP_KEY)}`, { maxZoom: 20, attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>' });
+  const voyager = carto("voyager", true).addTo(map);
+  const positron = carto("light_all", false);
+  L.control.layers({ "สีสัน (Voyager)": voyager, "สว่างเรียบ (Positron)": positron }, null, { position: "topright", collapsed: true }).addTo(map);
+} else {
+  $("mapbox").classList.add("soft"); // ทำให้ภาพแผนที่ OpenStreetMap โทนสว่างและนุ่มขึ้นด้วย CSS
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: OSM_ATTR }).addTo(map);
+}
+
+function clusterIcon(c) {
+  const n = c.getChildCount(), size = n < 5 ? "s" : n < 15 ? "m" : "l";
+  return L.divIcon({ html: `<span>${n}</span>`, className: `cl cl-${size}`, iconSize: [44, 44] });
+}
+const markers = (L.markerClusterGroup ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45, iconCreateFunction: clusterIcon }) : L.layerGroup()).addTo(map);
+
+const pinKind = (s) => (s.isNew ? "new" : s.type === "yant" ? "yant" : "studio");
+function pinIcon(kind) {
+  return L.divIcon({
+    className: "pin-wrap",
+    html: `<span class="pin pin-${kind}"><i></i></span>${kind === "new" || kind === "draft" ? '<b class="pulse"></b>' : ""}`,
+    iconSize: [34, 42], iconAnchor: [17, 38], popupAnchor: [0, -34],
+  });
+}
+function popupHtml(s) {
+  const rate = s.rating ? `<span class="pr">★ ${esc(Number(s.rating).toFixed(1))}</span> <span class="pc">${esc(s.count)} รีวิว</span>` : '<span class="pc">ร้านใหม่ ยังไม่มีคะแนน</span>';
+  const sty = (s.styles || []).slice(0, 3).map((x) => `<span class="pt">${esc(x)}</span>`).join("");
+  return `<div class="pop"><span class="pk">${typeLabel(s)}</span><strong>${esc(s.name)}</strong><div>${rate}</div>${sty ? `<div class="pts">${sty}</div>` : ""}<div class="pa"><a class="go" href="${dirUrl(s)}" target="_blank" rel="noopener">นำทาง</a><button type="button" class="pm more" data-i="${shops.indexOf(s)}">ดูรายละเอียด</button></div></div>`;
+}
+function fitAll() { // บินไปให้เห็นทุกร้านพอดี
+  const pts = shops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng)).map((s) => [s.lat, s.lng]);
+  if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.15), { duration: 1.1, maxZoom: 15 });
+}
+const legend = L.control({ position: "bottomleft" });
+legend.onAdd = () => {
+  const d = L.DomUtil.create("div", "mlegend");
+  d.innerHTML = '<span><i class="d d-studio"></i>สตูดิโอ</span><span><i class="d d-yant"></i>สำนักสักยันต์</span><span><i class="d d-new"></i>ร้านใหม่</span><button type="button" class="mfit">ดูทุกร้าน</button>';
+  L.DomEvent.disableClickPropagation(d);
+  d.querySelector(".mfit").addEventListener("click", fitAll);
+  return d;
+};
+legend.addTo(map);
 
 // ---------- render ----------
 function typeLabel(s) { return s.type === "yant" ? "สำนักสักยันต์" : "สตูดิโอ"; }
@@ -175,8 +217,9 @@ function render() {
   $("count").textContent = !query ? `แสดง ${list.length} จาก ${shops.length} ร้าน` : nRel && !nDir ? `ไม่มีร้านที่ตรงกับ “${query}” พบ ${nRel} ร้านที่ใกล้เคียง` : nRel ? `พบ ${nDir} ร้านที่ตรง และ ${nRel} ร้านที่ใกล้เคียงกับ “${query}”` : `พบ ${nDir} ร้านที่ตรงกับ “${query}”`;
   markers.clearLayers();
   list.forEach((s) => {
-    const m = L.marker([s.lat, s.lng]).addTo(markers);
-    m.bindPopup(`<strong>${esc(s.name)}</strong><br>${typeLabel(s)}<br><a href="${dirUrl(s)}" target="_blank" rel="noopener">นำทาง</a><br><button type="button" class="pm more" data-i="${shops.indexOf(s)}">ดูรายละเอียด</button>`);
+  const m = L.marker([s.lat, s.lng], { icon: pinIcon(pinKind(s)), riseOnHover: true, title: s.name });
+  m.bindPopup(popupHtml(s), { className: "ink-pop", maxWidth: 260 });
+  markers.addLayer(m);
   });
   const yant = shops.filter((s) => s.type === "yant").length;
   $("stats").innerHTML = `<div><b>${shops.length}</b><span>ร้านและสำนักทั้งหมด</span></div><div><b>${shops.length - yant}</b><span>สตูดิโอสักลาย</span></div><div><b>${yant}</b><span>สำนักสักยันต์</span></div>`;
@@ -185,6 +228,7 @@ function render() {
 function renderChips() {
   const set = new Set(["ทั้งหมด"]);
   shops.forEach((s) => (s.styles || []).forEach((x) => set.add(x)));
+  if ($("chipHint")) $("chipHint").textContent = `ร้านที่มีอยู่ตอนนี้มีสไตล์ ${set.size - 1} แบบ กดเลือกเพื่อดูเฉพาะร้านที่ถนัด (เลื่อนไปทางขวาเพื่อดูเพิ่ม)`;
   $("chips").innerHTML = [...set].map((x) => `<button type="button" class="k" aria-pressed="${x === activeStyle}">${esc(x)}</button>`).join("");
   $("chips").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { activeStyle = b.textContent; renderChips(); render(); }));
 }
@@ -196,6 +240,9 @@ $("styleBoxes").innerHTML = STYLE_GROUPS.map((g) => `<p class="kh">${esc(g)}</p>
 if ($("qlist")) $("qlist").innerHTML = STYLE_LIST.map((x) => `<option value="${esc(x)}">`).join("");
 const f = $("f");
 const say = (t) => { $("msg").textContent = t; };
+$("styleBoxes").addEventListener("change", (e) => {
+  if (e.target.checked && f.querySelectorAll('input[name="style"]:checked').length > MAX_STYLES) { e.target.checked = false; say("เลือกสไตล์ได้สูงสุด " + MAX_STYLES + " อย่าง"); }
+});
 $("styleBoxes").addEventListener("change", (e) => {
   if (e.target.checked && f.querySelectorAll('input[name="style"]:checked').length > MAX_STYLES) { e.target.checked = false; say("เลือกสไตล์ได้สูงสุด " + MAX_STYLES + " อย่าง"); }
 });
@@ -219,7 +266,7 @@ function setPin(lat, lng, opts = {}) {
   if (draftPin) {
     draftPin.setLatLng([lat, lng]);
   } else {
-    draftPin = L.marker([lat, lng], { draggable: true }).addTo(map).bindPopup("ตำแหน่งร้านของคุณ ลากหมุดเพื่อปรับได้");
+    draftPin = L.marker([lat, lng], { draggable: true, icon: pinIcon("draft") }).addTo(map).bindPopup("ตำแหน่งร้านของคุณ ลากหมุดเพื่อปรับได้");
     draftPin.on("dragend", () => { const p = draftPin.getLatLng(); setPin(p.lat, p.lng, { keepView: true, scroll: false }); });
   }
   if (accCircle) { map.removeLayer(accCircle); accCircle = null; }
@@ -266,7 +313,7 @@ $("pick").addEventListener("click", () => {
     pinSay("วางหมุดไว้กลางแผนที่แล้ว ลากหมุดหรือคลิกบนแผนที่ไปตำแหน่งร้าน แล้วกด \"ใช้ตำแหน่งนี้\"");
   }
 });
-map.on("click", (e) => { if (picking) setPin(e.latlng.lat, e.latlng.lng, { keepView: true, scroll: false }); });
+map.on("click", (e) => { if (picking && !$("add").hidden) setPin(e.latlng.lat, e.latlng.lng, { keepView: true, scroll: false }); }); // เลือกตำแหน่งได้เฉพาะหน้าเพิ่มร้าน
 
 $("pinDone").addEventListener("click", () => {
   picking = false;
@@ -600,10 +647,17 @@ async function loadPlaceInfo(s, token) {
 }
 
 // ---------- สลับมุมมอง: กดแท็บ "เพิ่มร้านของคุณ" (#add) แสดงเฉพาะแผนที่กับฟอร์มเพิ่มร้าน ----------
+// หน้าอื่นนอกจาก "เพิ่มร้านของคุณ": แผนที่เป็นแบบดูอย่างเดียว ซ่อนหมุดร่างและแถบเลือกตำแหน่ง ไม่ให้คลิกเลือกตำแหน่งได้
+function setPinMode(on) {
+  if (!on) picking = false;
+  [draftPin, accCircle].forEach((l) => { if (!l) return; if (on) l.addTo(map); else map.removeLayer(l); });
+  $("pinBar").hidden = !(on && draftPin);
+}
 function syncView(initial) {
   const on = location.hash === "#add";
   document.body.classList.toggle("view-add", on); // ซ่อนหัวเว็บใหญ่และรายการร้านทั้งหมดผ่าน CSS
   $("add").hidden = !on;
+  setPinMode(on);
   map.invalidateSize();
   if (on) { window.scrollTo({ top: 0 }); return; }
   if (initial) return;

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>INK KHON KAEN | รวมร้านสักลายขอนแก่น</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -32,6 +33,7 @@
   <div class="bar">
     <label for="q" class="vh">ค้นหาร้าน</label>
     <input id="q" type="search" list="qlist" placeholder="ค้นหาชื่อร้านหรือสไตล์ เช่น มินิมอล, ยันต์, ปิดรอยแผลเป็น, cover up" autocomplete="off"><datalist id="qlist"></datalist>
+    <p id="chipHint" class="chip-hint">สไตล์ที่มีในร้านตอนนี้ กดเลือกเพื่อดูเฉพาะร้านที่ถนัด</p>
     <div id="chips" class="ks"></div>
   </div>
   <p id="count" class="sub" aria-live="polite"></p>
@@ -88,6 +90,7 @@
 <dialog id="dlg" class="dlg" aria-labelledby="dlgTitle"></dialog>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="config.js"></script>
 <script src="shops-data.js"></script>
 <script src="app.js"></script>
